@@ -1,43 +1,38 @@
 import ErrorHandler from "@/app/lib/ErrorHandler";
 import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
-import isEmail from "validator/lib/isEmail";
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ param: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<Response> {
   try {
-    // Fetch param from params
-    const { param } = await params;
+    // Fetch id from params
+    const { id } = await params;
 
-    // If param not in params
-    if (!param) {
+    // If id not in params
+    if (!id) {
       return NextResponse.json(
-        { message: "User ID or email not provided." },
+        { message: "Quiz ID not provided." },
         { status: 400 }
       );
     }
 
-    // Check if param is email
-    const emailOrId = isEmail(param) ? { email: param } : { userId: param };
-    console.log(emailOrId)
-
-    // Fetch user by email or id
-    const currentUser = await prisma.user.findUnique({
-      where: emailOrId,
+    // Fetch quiz by ID
+    const currentQuiz = await prisma.quiz.findUnique({
+      where: {quizId: id},
     });
 
     // Check if no records are found
-    if (!currentUser) {
+    if (!currentQuiz) {
       return NextResponse.json(
-        { message: `User '${param}' not found.` },
+        { message: `Quiz '${id}' not found.` },
         { status: 404 }
       );
     }
 
     // Return the records
-    return Response.json({ message: "User found", records: currentUser });
+    return Response.json({ message: `Quiz '${id}' found.` , records: currentQuiz });
   } catch (error) {
     // Handle errors
     const { status, message } = ErrorHandler(error);
@@ -47,32 +42,29 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: Promise<{ param: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<Response> {
   try {
-    // Fetch param from params
-    const { param } = await params;
+    // Fetch id from params
+    const { id } = await params;
 
-    // If param not in params
-    if (!param) {
+    // If id not in params
+    if (!id) {
       return NextResponse.json(
-        { message: "User ID or email not provided." },
+        { message: "Quiz ID not provided." },
         { status: 400 }
       );
     }
 
-    // Check if param is email or userId
-    const emailOrId = isEmail(param) ? { email: param } : { userId: param };
-
-    // Fetch user by email or id
-    const currentUser = await prisma.user.findUnique({
-      where: emailOrId,
+    // Find quiz by ID
+    const currentQuiz = await prisma.quiz.findUnique({
+      where: {quizId: id},
     });
 
     // Check if no records are found
-    if (!currentUser) {
+    if (!currentQuiz) {
       return NextResponse.json(
-        { message: `User '${param}' not found.` },
+        { message: `Quiz '${id}' not found.` },
         { status: 404 }
       );
     }
@@ -88,19 +80,14 @@ export async function PUT(
       );
     }
 
-    // Get the allowed fields from your User model
+    // Get the allowed fields from your Quiz model
     const allowedFields = [
-      "email", // Update and reset isVerified
-      // 'username', // Can never be updated
-      "phone", // Update and reset isVerified
-      // 'hashedPassword', // Updated in a separate route
-      // 'hashedOTP', // Updated in a separate route
-      "fullname",
-      // "isVerified",
-      "history",
-      "quizCount",
-      "currentScore",
-      "rank",
+      "question",
+      "category",
+      "options",
+      "answer",
+      // "flagged", 
+      // "approved" 
     ];
 
     // Check if the request body contains any disallowed fields
@@ -122,23 +109,24 @@ export async function PUT(
       return acc;
     }, {} as Record<string, unknown>);
 
-    // If email or phone is updated, reset isVerified
-    if (filteredBody.email || filteredBody.phone) {
-      filteredBody.isVerified = false;
+    // If question, category, options, answers updated, reset flagged and approved
+    if (filteredBody.question || filteredBody.category || filteredBody.options || filteredBody.answer) {
+      filteredBody.flagged = false;
+      filteredBody.approved = false;
     }
 
     // Update the updatedAt field
     filteredBody.updatedAt = new Date();
 
-    const updatedUser = await prisma.user.update({
-      where: emailOrId,
+    const updatedQuiz = await prisma.quiz.update({
+      where: {quizId: id},
       data: filteredBody,
     });
 
     // Return the records
     return Response.json({
-      message: `User '${param}' updated`,
-      records: updatedUser,
+      message: `Quiz '${id}' updated`,
+      records: updatedQuiz,
     });
   } catch (error) {
     // Handle errors
@@ -147,47 +135,44 @@ export async function PUT(
   }
 }
 
-
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ param: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<Response> {
   try {
-    // Fetch param from params
-    const { param } = await params;
+    // Fetch id from params
+    const { id } = await params;
 
-    // If param not in params
-    if (!param) {
+    // If id not in params
+    if (!id) {
       return NextResponse.json(
-        { message: "User ID or email not provided." },
+        { message: "Quiz ID not provided." },
         { status: 400 }
       );
     }
 
-    // Check if param is email or userId
-    const emailOrId = isEmail(param) ? { email: param } : { userId: param };
-
-    // Fetch user by email or id
-    const currentUser = await prisma.user.findUnique({
-      where: emailOrId,
+    // Fetch quiz byy ID
+    const currentQuiz = await prisma.quiz.findUnique({
+      where: {
+        quizId:  id},
     });
 
     // Check if no records are found
-    if (!currentUser) {
+    if (!currentQuiz) {
       return NextResponse.json(
-        { message: `User '${param}' not found.` },
+        { message: `Quiz '${id}' not found.` },
         { status: 404 }
       );
     }
 
-    // Delete the user
-    await prisma.user.delete({
-      where: emailOrId,
+    // Delete the quiz
+    await prisma.quiz.delete({
+      where: {quizId: id},
     });
 
     // Return the records
     return Response.json({
-      message: `User '${param}' deleted`,
+      message: `Quiz '${id}' deleted`,
     });
   } catch (error) {
     // Handle errors

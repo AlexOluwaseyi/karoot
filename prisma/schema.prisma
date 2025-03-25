@@ -32,13 +32,14 @@ model User {
 }
 
 model Quiz {
-  quizId    String   @id @default(uuid())
-  question  String
-  category  String
-  options   String[]
-  answer    String
-  flag      Boolean  @default(false)
-  approved  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  quizId      String   @id @default(uuid())
+  question    String
+  category    String
+  options     String[]
+  answer      String
+  submittedBy String
+  flagged     Boolean  @default(false)
+  approved    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
