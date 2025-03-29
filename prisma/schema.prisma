@@ -23,6 +23,7 @@ model User {
   hashedOTP      Json?
   fullname       String?
   isVerified     Boolean?  @default(false)
+  isAdmin        Boolean?  @default(false)
   history        Json?     @default("{}")
   quizCount      Int?      @default(0)
   currentScore   Int?      @default(0)
@@ -38,6 +39,7 @@ model Quiz {
   options     String[]
   answer      String
   submittedBy String
+  approvedBy  String
   flagged     Boolean  @default(false)
   approved    Boolean  @default(false)
   createdAt   DateTime @default(now())
