@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
 import ErrorHandler from "@@/lib/ErrorHandler";
-import { manageTokens } from "@/app/lib/auth/jwt";
+import { manageTokens } from "@/app/lib/auth/jwtAuth";
 import { checkPassword } from "@/app/lib/auth/password";
+import isEmail from "validator/lib/isEmail";
 
 export async function POST(request: Request): Promise<Response> {
   try {
@@ -15,17 +16,20 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    if (!body.username || !body.password) {
+    if (!body.cred || !body.password) {
       return NextResponse.json(
         { message: "Required fields missing." },
         { status: 400 }
       );
     }
 
+    // Check if the user entered username or email
+    const emailOrUsername = isEmail(body.cred)
+      ? { email: body.cred }
+      : { username: body.cred };
+
     const user = await prisma.user.findUnique({
-      where: {
-        username: body.username,
-      },
+      where: emailOrUsername,
     });
 
     if (!user) {
@@ -36,7 +40,7 @@ export async function POST(request: Request): Promise<Response> {
 
     if (!passwordMatch) {
       return NextResponse.json(
-        { message: "Invalid password." },
+        { message: "Password incorrect." },
         { status: 401 }
       );
     }
@@ -46,8 +50,6 @@ export async function POST(request: Request): Promise<Response> {
       username: user.username,
       email: user.email,
     });
-
-
 
     const response = NextResponse.json(
       { message: "Login successful.", accessToken, refreshToken },

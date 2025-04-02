@@ -2,16 +2,16 @@ import prisma from "@/app/lib/prisma";
 import ErrorHandler from "@/app/lib/ErrorHandler";
 import { NextResponse } from "next/server";
 import { hashPassword } from "@/app/lib/auth/password";
-import { z } from "zod";
+import { SignUpSchema } from "@/app/lib/zodSchema";
 
-// Define signup validation schema
-const signupSchema = z.object({
-    email: z.string().email("Invalid email address"),
-    phone: z.string().min(10, "Phone number must be at least 10 characters"),
-    username: z.string().min(3, "Username must be at least 3 characters"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    fullname: z.string().optional(),
-});
+// // Define signup validation schema
+// const SignUpSchema = z.object({
+//     email: z.string().email("Invalid email address"),
+//     phone: z.string().min(10, "Phone number must be at least 10 characters"),
+//     username: z.string().min(3, "Username must be at least 3 characters"),
+//     password: z.string().min(8, "Password must be at least 8 characters"),
+//     fullname: z.string().optional(),
+// });
 
 export async function POST(request: Request): Promise<Response> {
     try {
@@ -19,7 +19,7 @@ export async function POST(request: Request): Promise<Response> {
         const body = await request.json();
 
         // Validate request data
-        const result = signupSchema.safeParse(body);
+        const result = SignUpSchema.safeParse(body);
 
         if (!result.success) {
             const formattedErrors = result.error.format();
@@ -66,11 +66,7 @@ export async function POST(request: Request): Promise<Response> {
                 phone,
                 username,
                 hashedPassword,
-                fullname: fullname || null,
-                isVerified: false,
-                quizCount: 0,
-                currentScore: 0,
-                rank: 0
+                fullname: fullname || null // Optional field
             }
         });
 
