@@ -30,6 +30,12 @@ model User {
   rank           Int?      @default(1)
   createdAt      DateTime? @default(now())
   updatedAt      DateTime? @updatedAt
+
+  // Relations
+  submittedQuizzes Quiz[]     @relation("QuizSubmitter")
+  approvedQuizzes  Quiz[]     @relation("QuizApprover")
+  performedAudits  AuditLog[] @relation("AuditPerformer")
+  targetAudits     AuditLog[] @relation("AuditTarget")
 }
 
 model Quiz {
@@ -38,10 +44,27 @@ model Quiz {
   category    String
   options     String[]
   answer      String
-  submittedBy String
-  approvedBy  String
   flagged     Boolean  @default(false)
   approved    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // Relations
+  submitter   User    @relation("QuizSubmitter", fields: [submitterId], references: [userId])
+  submitterId String
+  approver    User?   @relation("QuizApprover", fields: [approverId], references: [userId])
+  approverId  String? @default("pending")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  action      String
+  description String
+  performedAt DateTime @default(now())
+
+  // Relations
+  performer   User?   @relation("AuditPerformer", fields: [performerId], references: [userId])
+  performerId String?
+  target      User?   @relation("AuditTarget", fields: [targetId], references: [userId])
+  targetId    String?
 }
