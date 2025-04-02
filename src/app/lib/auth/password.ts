@@ -25,13 +25,13 @@ export const hashPassword = async (password: string): Promise<string> => {
 // Hashed password checking utility
 export const checkPassword = async (userId: string, password: string): Promise<boolean> => {
     try {
-        const currentUser = await prisma.user.findUnique({
+        const user = await prisma.user.findUnique({
             where: { userId: userId }
         });
-        if (!currentUser) {
+        if (!user) {
             throw new Error("User not found.");
         }
-        const match = await bcrypt.compare(password, currentUser.hashedPassword);
+        const match = await bcrypt.compare(password, user.hashedPassword);
         return match;
     } catch (error) {
         throw new Error(`Password checking failed: ${error}`);
