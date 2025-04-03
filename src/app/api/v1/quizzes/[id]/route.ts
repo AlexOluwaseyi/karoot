@@ -1,6 +1,7 @@
 import ErrorHandler from "@/app/lib/ErrorHandler";
 import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
+import { authenticateRequest } from "@/app/lib/auth/cookieAuth";
 
 export async function GET(
   request: Request,
@@ -20,7 +21,7 @@ export async function GET(
 
     // Fetch quiz by ID
     const currentQuiz = await prisma.quiz.findUnique({
-      where: {quizId: id},
+      where: { quizId: id },
     });
 
     // Check if no records are found
@@ -32,7 +33,7 @@ export async function GET(
     }
 
     // Return the records
-    return Response.json({ message: `Quiz '${id}' found.` , records: currentQuiz });
+    return Response.json({ message: `Quiz '${id}' found.`, records: currentQuiz });
   } catch (error) {
     // Handle errors
     const { status, message } = ErrorHandler(error);
@@ -45,6 +46,48 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ): Promise<Response> {
   try {
+    // Authenticate the request
+    const auth = await authenticateRequest(true); // Admin only
+    if (auth.error) {
+      return auth.error;
+    }
+    const authUser = auth.user;
+    if (!authUser) {
+      return NextResponse.json({ message: "No authenticated user found." }, { status: 401 });
+    }
+
+    /** Refactor cookie authentication
+     *
+
+    // Fetch cookies
+    const cookieStore = await cookies(); // Access cookies
+    const accessToken = cookieStore.get("accessToken")?.value;
+
+    if (!accessToken) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+    // Fetch payload from access token
+    const currentUser = verifyToken(accessToken, "access");
+    if (!currentUser) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+    // Fetch user record from database
+    const userRecord = await prisma.user.findUnique({
+      where: { userId: currentUser.userId },
+    });
+
+    if (!userRecord) {
+      return NextResponse.json({ message: "User not found" }, { status: 401 });
+    }
+
+    // Check if user is an admin
+    if (!userRecord.isAdmin) {
+      return NextResponse.json(
+        { message: "Only administrators can update quizzes." },
+        { status: 403 }
+      );
+    } */
+
     // Fetch id from params
     const { id } = await params;
 
@@ -58,7 +101,7 @@ export async function PUT(
 
     // Find quiz by ID
     const currentQuiz = await prisma.quiz.findUnique({
-      where: {quizId: id},
+      where: { quizId: id },
     });
 
     // Check if no records are found
@@ -86,8 +129,8 @@ export async function PUT(
       "category",
       "options",
       "answer",
-      // "flagged", 
-      // "approved" 
+      // "flagged",
+      // "approved"
     ];
 
     // Check if the request body contains any disallowed fields
@@ -115,11 +158,22 @@ export async function PUT(
       filteredBody.approved = false;
     }
 
+    // Create audit log entry
+    await prisma.auditLog.create({
+      data: {
+        action: `QUIZ_UPDATE`,
+        description: `Quiz '${id}' updated`,
+        performedAt: new Date(),
+        performerId: authUser.userId,
+        targetId: currentQuiz.quizId,
+      },
+    });
+
     // Update the updatedAt field
     filteredBody.updatedAt = new Date();
 
     const updatedQuiz = await prisma.quiz.update({
-      where: {quizId: id},
+      where: { quizId: id },
       data: filteredBody,
     });
 
@@ -140,6 +194,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ): Promise<Response> {
   try {
+    // Authenticate the request
+    const auth = await authenticateRequest(true); // Admin only
+    if (auth.error) {
+      return auth.error;
+    }
+    const authUser = auth.user;
+    if (!authUser) {
+      return NextResponse.json({ message: "No authenticated user found." }, { status: 401 });
+    }
+
     // Fetch id from params
     const { id } = await params;
 
@@ -154,7 +218,8 @@ export async function DELETE(
     // Fetch quiz byy ID
     const currentQuiz = await prisma.quiz.findUnique({
       where: {
-        quizId:  id},
+        quizId: id
+      },
     });
 
     // Check if no records are found
@@ -167,7 +232,18 @@ export async function DELETE(
 
     // Delete the quiz
     await prisma.quiz.delete({
-      where: {quizId: id},
+      where: { quizId: id },
+    });
+
+    // Create audit log entry
+    await prisma.auditLog.create({
+      data: {
+        action: `QUIZ_DELETE`,
+        description: `Quiz '${id}' deleted by ${authUser.username}`,
+        performedAt: new Date(),
+        performerId: authUser.userId,
+        targetId: currentQuiz.quizId,
+      },
     });
 
     // Return the records
