@@ -50,7 +50,7 @@ export async function verifyUser(): Promise<Response> {
       },
     });
 
-    
+
 
     return NextResponse.json({ message: "User verified." }, { status: 200 });
   } catch (error) {
