@@ -20,7 +20,6 @@ model User {
   username       String    @unique
   phone          String    @unique
   hashedPassword String
-  hashedOTP      Json?
   fullname       String?
   isVerified     Boolean?  @default(false)
   isAdmin        Boolean?  @default(false)
@@ -36,7 +35,7 @@ model User {
   approvedQuizzes  Quiz[]     @relation("QuizApprover")
   performedAudits  AuditLog[] @relation("AuditPerformer")
   targetAudits     AuditLog[] @relation("AuditTarget")
-  OTP              OTP[]
+  OTP              Otp[]
 }
 
 model Quiz {
@@ -51,10 +50,11 @@ model Quiz {
   updatedAt DateTime @updatedAt
 
   // Relations
-  submitter   User    @relation("QuizSubmitter", fields: [submitterId], references: [userId])
+  submitter   User       @relation("QuizSubmitter", fields: [submitterId], references: [userId])
   submitterId String
-  approver    User?   @relation("QuizApprover", fields: [approverId], references: [userId])
-  approverId  String? @default("pending")
+  approver    User?      @relation("QuizApprover", fields: [approverId], references: [userId])
+  approverId  String?    @default("pending")
+  AuditLog    AuditLog[]
 }
 
 model AuditLog {
@@ -68,17 +68,18 @@ model AuditLog {
   performerId String?
   target      User?   @relation("AuditTarget", fields: [targetId], references: [userId])
   targetId    String?
+  quiz        Quiz?   @relation(fields: [quizId], references: [quizId])
+  quizId      String?
 }
 
-model OTP {
+model Otp {
   id        String   @id @default(uuid())
+  attempts  Int      @default(0)
   hashedOTP String
   createdAt DateTime @default(now())
   expiresAt DateTime
 
   // Relations
-  user   User?   @relation(fields: [userId], references: [userId])
-  userId String?
-
-  @@map("otp")
+  user   User   @relation(fields: [userId], references: [userId])
+  userId String
 }

@@ -94,7 +94,6 @@ export async function PUT(
       // 'username', // Can never be updated
       "phone", // Update and reset isVerified
       // 'hashedPassword', // Updated in a separate route
-      // 'hashedOTP', // Updated in a separate route
       "fullname",
       // "isVerified",
       "history",
@@ -146,7 +145,6 @@ export async function PUT(
     return NextResponse.json({ message: message }, { status });
   }
 }
-
 
 export async function DELETE(
   request: Request,
