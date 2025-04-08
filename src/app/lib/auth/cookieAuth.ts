@@ -33,7 +33,7 @@ export async function authenticateRequest(requireAdmin = false): Promise<AuthRes
             };
         }
 
-        const tokenPayload = verifyToken(accessToken, "access");
+        const tokenPayload = await verifyToken(accessToken, "access");
 
         if (!tokenPayload) {
             return {
