@@ -1,9 +1,6 @@
 import ErrorHandler from "../ErrorHandler";
 import { SignJWT, jwtVerify } from "jose";
 
-const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN;
-const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN;
-
 type JwtPayload = {
   userId: string;
   email?: string;
@@ -15,8 +12,8 @@ type TokenType = 'access' | 'refresh'
 // Helper to get the secret key
 const getSecretKey = (type: TokenType) => {
   const secret = type === 'access'
-    ? ACCESS_TOKEN_SECRET
-    : REFRESH_TOKEN_SECRET;
+    ? process.env.ACCESS_TOKEN
+    : process.env.REFRESH_TOKEN;
 
   if (!secret) {
     throw new Error(`${type.toUpperCase()}_TOKEN is not defined`);
@@ -62,8 +59,12 @@ export async function verifyToken(token: string, type: TokenType = "access"): Pr
   try {
     const { payload } = await jwtVerify(token, getSecretKey(type));
     return payload as JwtPayload;
-  } catch (error) {
-    console.error('Token verification failed:', error);
+  } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (error.code === 'ERR_JWT_EXPIRED') {
+      console.log(`Token expired: ${type} token`);
+    } else {
+      console.error('Token verification failed:', error);
+    }
     return null;
   }
 }
@@ -80,27 +81,36 @@ export async function manageTokens(
   existingRefreshToken: string | null
 ): Promise<{ accessToken: string; refreshToken: string }> {
   try {
+    // Check if there isn't an existing refresh token
     if (!existingRefreshToken) {
       console.log("No existing refresh token, generating a new one");
-      // const refreshToken = await generateTokens(payload, "refresh") as string;
+      // Generate access and refresh tokens if no refresh token. 
       const { accessToken, refreshToken } = await generateTokens(payload);
       if (!accessToken || !refreshToken) {
         throw new Error("Failed to generate tokens");
       }
       return { accessToken, refreshToken };
     }
+    // If refresh token exists, verify refresh token and create access token with payload
     const refreshTokenPayload = await verifyToken(existingRefreshToken, "refresh");
+
+    // If payload verification fails or payload does not match, recreate tokens
     if (!refreshTokenPayload || refreshTokenPayload.userId !== payload.userId) {
-      console.log("Existing refresh token is invalid or expired, generating a new one");
+      console.log("Existing refresh token is invalid/expired, generating a new one");
       const { accessToken, refreshToken } = await generateTokens(payload);
       if (!accessToken || !refreshToken) {
         throw new Error("Failed to generate tokens");
       }
       return { accessToken, refreshToken };
     }
-    console.log("Using existing refresh token");
-    const accessToken = await generateTokens(payload, "access") as string;
-    return { accessToken, refreshToken: existingRefreshToken };
+
+    // If payload is verified and matches, refresh tokens.
+    console.log("Refreshing tokens.");
+    const { accessToken, refreshToken } = await generateTokens(refreshTokenPayload);
+    if (!accessToken || !refreshToken) {
+      throw new Error("Failed to generate tokens.")
+    }
+    return { accessToken, refreshToken };
   } catch (error) {
     console.error('Error in manageTokens:', error);
     const { status, message } = ErrorHandler(error);
